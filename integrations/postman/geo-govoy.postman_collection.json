@@ -1,0 +1,425 @@
+{
+  "info": {
+    "_postman_id": "e2d5ed8f-d6cb-4f5b-952a-34881ad68c55",
+    "name": "Geo Govoy API",
+    "description": "**Geo Govoy** — datos de calle y carretera para planificar rutas de reparto en **España**, por API REST y MCP.\n\nGeocodificación de direcciones españolas, geocodificación inversa, matriz de tiempos según la hora de salida (modelo propio de Govoy), incidencias DGT y tiempo y avisos AEMET en ruta.\n\nLo hace [Govoy](https://govoy.es), que construye agentes de IA para logística y transporte: Geo abre las mismas APIs que usan sus agentes.\n\n- Web y guía: https://geo.govoy.es\n- Referencia (Swagger): https://geo.govoy.es/docs\n- OpenAPI: https://geo.govoy.es/openapi.json\n- MCP: https://geo.govoy.es/mcp\n- Precios: https://govoy.es/geo/precios/\n- Ejemplos e integraciones: https://github.com/GovoySL/geo-govoy-mcp\n\n**Cómo empezar**: elige el entorno «Geo Govoy», pon tu clave en `GEO_API_KEY` (pídela en admin@govoy.es) y lanza cualquier petición. La clave va en la cabecera `X-API-Key` (configurada a nivel de colección). Solo empresas y autónomos con NIF español. Datos: © OpenStreetMap (ODbL), CartoCiudad/NGBE CC-BY 4.0 scne.es, Catastro, Overture, DGT, AEMET; ver https://geo.govoy.es/fuentes",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{GEO_API_KEY}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://geo.govoy.es",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Geocodificación",
+      "item": [
+        {
+          "name": "Geocodificar (raw_address)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v2/geocode",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "geocode"
+              ]
+            },
+            "description": "Direcciones españolas en texto libre → coordenadas. Hasta 1.000 por petición. 1 unidad por dirección distinta. Cada resultado trae `status`, `next_action` (aceptar, confirmar, corregir) y candidatos con `confidence_score`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"external_id\": \"pedido-1\",\n      \"raw_address\": \"Calle de Alcalá 50, 28014 Madrid\"\n    },\n    {\n      \"external_id\": \"pedido-2\",\n      \"raw_address\": \"Avda. Diagonal 640, Barcelona\"\n    }\n  ],\n  \"top_k\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Geocodificar (campos separados)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v2/geocode",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v2",
+                "geocode"
+              ]
+            },
+            "description": "Misma operación con calle, número, código postal y municipio por separado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"external_id\": \"pedido-3\",\n      \"street\": \"Calle Mayor\",\n      \"house_number\": \"1\",\n      \"postcode\": \"28901\",\n      \"municipality\": \"Getafe\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Geocodificación inversa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reverse-geocode",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reverse-geocode"
+              ]
+            },
+            "description": "Coordenadas → dirección más cercana. Hasta 5.000 puntos. `mode: gps` para puntos ruidosos. 1 unidad por punto.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"external_id\": \"gps-1\",\n      \"lat\": 40.4189,\n      \"lon\": -3.6969\n    }\n  ],\n  \"radius_m\": 75,\n  \"mode\": \"standard\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tiempos y distancias",
+      "item": [
+        {
+          "name": "Matriz por hora de salida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/matrix",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "matrix"
+              ]
+            },
+            "description": "Matriz de tiempos (s) y distancias (m) por carretera con el modelo de conducción govoy-conduccion-v1 según la hora de salida (`HH:MM` o ISO con fecha). Hasta 200 puntos. `model: osrm` para OSRM en bruto.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locations\": [\n    {\n      \"lat\": 40.4168,\n      \"lon\": -3.7038\n    },\n    {\n      \"lat\": 40.453,\n      \"lon\": -3.6883\n    },\n    {\n      \"lat\": 40.3923,\n      \"lon\": -3.6995\n    }\n  ],\n  \"departure_time\": \"2026-12-01T08:30\",\n  \"model\": \"govoy\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tráfico DGT",
+      "item": [
+        {
+          "name": "Incidencias DGT en ruta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/traffic/route-incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "traffic",
+                "route-incidents"
+              ]
+            },
+            "description": "Obras, cortes y accidentes de la DGT cerca de las paradas de una o varias rutas, a la hora de paso. Sin País Vasco ni Cataluña. 1 unidad por ruta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routes\": [\n    {\n      \"id\": \"ruta-1\",\n      \"stops\": [\n        {\n          \"id\": \"p1\",\n          \"lat\": 40.4168,\n          \"lon\": -3.7038,\n          \"time\": \"08:30\"\n        },\n        {\n          \"id\": \"p2\",\n          \"lat\": 40.33,\n          \"lon\": -3.77,\n          \"time\": \"09:15\"\n        }\n      ]\n    }\n  ],\n  \"radius_m\": 1000,\n  \"max_incidents\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tiempo AEMET",
+      "item": [
+        {
+          "name": "Tiempo y avisos en ruta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/weather/route-conditions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "weather",
+                "route-conditions"
+              ]
+            },
+            "description": "Tiempo AEMET en cada parada a su hora y avisos que la afectan. 1 unidad por ruta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routes\": [\n    {\n      \"id\": \"ruta-1\",\n      \"stops\": [\n        {\n          \"id\": \"p1\",\n          \"lat\": 39.4699,\n          \"lon\": -0.3763,\n          \"time\": \"10:00\"\n        },\n        {\n          \"id\": \"p2\",\n          \"lat\": 38.3452,\n          \"lon\": -0.481,\n          \"time\": \"12:00\"\n        }\n      ]\n    }\n  ],\n  \"min_warning_level\": \"yellow\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Previsión en un punto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/weather/forecast?lat=37.3891&lon=-5.9845",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "weather",
+                "forecast"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "37.3891"
+                },
+                {
+                  "key": "lon",
+                  "value": "-5.9845"
+                }
+              ]
+            },
+            "description": "Previsión AEMET para un punto. 1 unidad."
+          },
+          "response": []
+        },
+        {
+          "name": "Avisos en un punto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/weather/warnings?lat=43.2630&lon=-2.9350",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "weather",
+                "warnings"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "43.2630"
+                },
+                {
+                  "key": "lon",
+                  "value": "-2.9350"
+                }
+              ]
+            },
+            "description": "Avisos AEMET activos para un punto (hoy por defecto; hasta 2 días después). 1 unidad."
+          },
+          "response": []
+        },
+        {
+          "name": "Histórico en un punto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/weather/history?lat=41.6488&lon=-0.8891&from=2026-11-01&to=2026-11-07",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "weather",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "41.6488"
+                },
+                {
+                  "key": "lon",
+                  "value": "-0.8891"
+                },
+                {
+                  "key": "from",
+                  "value": "2026-11-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-07"
+                }
+              ]
+            },
+            "description": "Tiempo observado en días pasados. 1 unidad."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cuenta",
+      "item": [
+        {
+          "name": "Mi cuenta (/v1/me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "me"
+              ]
+            },
+            "description": "Plan, límite por minuto, cuota mensual y consumo del mes. Gratis."
+          },
+          "response": []
+        },
+        {
+          "name": "Consumo por mes (/v1/uso)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/uso?mes=2026-11",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "uso"
+              ],
+              "query": [
+                {
+                  "key": "mes",
+                  "value": "2026-11"
+                }
+              ]
+            },
+            "description": "Consumo de un mes (AAAA-MM; por defecto el actual). Gratis."
+          },
+          "response": []
+        },
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Estado del servicio. Sin clave.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
