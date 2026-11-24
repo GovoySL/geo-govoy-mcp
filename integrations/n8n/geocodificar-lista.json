@@ -1,0 +1,145 @@
+{
+  "name": "Geo Govoy · Geocodificar una lista de direcciones",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "9a671b18-f971-4c07-ad5a-d37933ef5379",
+      "name": "Al ejecutar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cbe148a0-4723-4228-a6d2-7895e0a24c2a",
+              "name": "GEO_API_KEY",
+              "value": "PEGA_AQUI_TU_CLAVE",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3caf7d87-9676-42da-b8d7-dab19179126c",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Cambia esta lista por la tuya (o sustituye este nodo por Google Sheets, CSV, base de datos...).\n// Hasta 1.000 direcciones por petición; para más, usa el nodo Loop Over Items en lotes de 1.000.\nconst direcciones = [\n  { id: 'pedido-1', direccion: 'Calle de Alcalá 50, 28014 Madrid' },\n  { id: 'pedido-2', direccion: 'Avda. Diagonal 640, Barcelona' },\n  { id: 'pedido-3', direccion: 'Plaza del Ayuntamiento 1, Valencia' },\n];\nreturn [{ json: { items: direcciones.map(d => ({ external_id: d.id, raw_address: d.direccion })), top_k: 1 } }];"
+      },
+      "id": "0211ff6a-4f1a-404f-9972-fdb3baeca6ee",
+      "name": "Lista de direcciones",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://geo.govoy.es/v2/geocode",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $('Config').item.json.GEO_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "b3f7f544-1caf-48eb-835f-d1682fa4d4d7",
+      "name": "Geocodificar (Geo Govoy)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\nfor (const r of $json.results) {\n  const c = (r.candidates || [])[0] || {};\n  out.push({ json: {\n    id: r.external_id,\n    estado: r.status,\n    siguiente_paso: r.next_action,\n    direccion_normalizada: c.formatted_address ?? null,\n    lat: c.lat ?? null,\n    lon: c.lon ?? null,\n    confianza: c.confidence_score ?? null,\n    precision: c.coordinate_accuracy ?? null,\n  } });\n}\nreturn out;"
+      },
+      "id": "ac804e6c-32c6-4908-ad43-186aad79d55c",
+      "name": "Una fila por dirección",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Al ejecutar": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Lista de direcciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lista de direcciones": {
+      "main": [
+        [
+          {
+            "node": "Geocodificar (Geo Govoy)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocodificar (Geo Govoy)": {
+      "main": [
+        [
+          {
+            "node": "Una fila por dirección",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
