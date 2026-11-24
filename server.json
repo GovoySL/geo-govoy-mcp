@@ -1,0 +1,33 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "es.govoy/geo",
+  "title": "Geo Govoy",
+  "description": "Spain geocoding, departure-time travel matrices, DGT traffic incidents and AEMET weather alerts.",
+  "version": "1.0.0",
+  "websiteUrl": "https://geo.govoy.es",
+  "repository": {
+    "url": "https://github.com/GovoySL/geo-govoy-mcp",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/GovoySL/geo-govoy-mcp/main/assets/geo-icon-512.png",
+      "mimeType": "image/png",
+      "sizes": ["512x512"]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://geo.govoy.es/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer <your Geo Govoy API key>. Request one at admin@govoy.es (see https://geo.govoy.es)",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
