@@ -397,6 +397,54 @@
           "name": "Google Sheets"
         }
       }
+    },
+    {
+      "parameters": {
+        "content": "### 1. Read pending rows\nReads the `Addresses` tab and keeps only rows with an address and an empty `lat`, grouped in batches of up to 1,000 (change `COLUMN` / `BATCH` in the Code node).",
+        "height": 320,
+        "width": 480,
+        "color": 7
+      },
+      "id": "175fc93c-9ae3-4df3-bd7a-dd31d7af54d4",
+      "name": "Step 1 · Read pending rows",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        300,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 2. Geocode in batches\nOne `POST /v2/geocode` call per batch. Header Auth credential `X-API-Key`. Retries 3 times on errors and 429.",
+        "height": 320,
+        "width": 220,
+        "color": 7
+      },
+      "id": "f91e27b8-9e34-4fdd-a6cc-56b68764639a",
+      "name": "Step 2 · Geocode",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        760,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 3. Write back and flag\nOne item per address with lat, lon, status, confidence, normalized address, next action and reason. Updates the same row (matched by `row_number`) and copies rows that need review (no match, `next_action` not `accept`, or confidence < `THRESHOLD`) to the `Review` tab.",
+        "height": 560,
+        "width": 700,
+        "color": 7
+      },
+      "id": "0efe3999-287b-4dc4-a7bb-2bcd748b0bc0",
+      "name": "Step 3 · Write back and flag",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        990,
+        -160
+      ]
     }
   ],
   "connections": {
