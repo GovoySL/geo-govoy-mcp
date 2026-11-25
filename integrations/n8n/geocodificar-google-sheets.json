@@ -1,0 +1,484 @@
+{
+  "name": "Geocodificar direcciones de Google Sheets con Geo Govoy",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Geocodificar direcciones de Google Sheets con Geo Govoy\n\nLee una hoja con una columna **direccion**, geocodifica en lotes de hasta 1.000 con `POST /v2/geocode` y escribe en la misma fila **lat, lon, estado, confianza, direccion_normalizada, siguiente_paso y motivo**. Las dudosas (no `accept` o confianza < 0,8) se copian además a la pestaña **Dudosas**.\n\n**Preparar**\n1. Hoja con pestaña `Direcciones` y cabeceras: `direccion | lat | lon | estado | confianza | direccion_normalizada | siguiente_paso | motivo`. Pestaña `Dudosas` con las mismas cabeceras.\n2. Pega la URL de la hoja en los 3 nodos de Google Sheets y elige tu credencial de Google.\n3. En **Geo Govoy · geocode**, crea una credencial **Header Auth**: Name `X-API-Key`, Value tu clave (pídela en admin@govoy.es; franquicia gratis cada mes).\n\nSolo procesa filas con `lat` vacía: puedes ejecutarlo tantas veces como quieras. 1 unidad por dirección distinta.\n\nDocs: https://geo.govoy.es/docs · Solo España.",
+        "height": 480,
+        "width": 460,
+        "color": 4
+      },
+      "id": "d86e9153-15df-4359-be19-ee60af982933",
+      "name": "Léeme",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -380,
+        -160
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "b49622a4-35b9-4bdf-b792-91999b01c384",
+      "name": "Al ejecutar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        140,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Direcciones",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "f406c510-3646-4f33-847d-36d642fa6531",
+      "name": "Leer direcciones",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        360,
+        100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Columna de la hoja con la dirección y tamaño del lote (máximo 1.000 por petición)\nconst COLUMNA = 'direccion';\nconst LOTE = 1000;\n\nconst filas = $input.all()\n  .map((i) => i.json)\n  .filter((r) => String(r[COLUMNA] ?? '').trim() !== '' && String(r.lat ?? '').trim() === '');\n\nconst lotes = [];\nfor (let i = 0; i < filas.length; i += LOTE) {\n  lotes.push({\n    json: {\n      items: filas.slice(i, i + LOTE).map((r) => ({\n        external_id: String(r.row_number),\n        raw_address: String(r[COLUMNA]).trim(),\n      })),\n    },\n  });\n}\nreturn lotes;"
+      },
+      "id": "cbc406da-91d3-40b2-8a46-30fedd474436",
+      "name": "Preparar lotes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://geo.govoy.es/v2/geocode",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ items: $json.items, top_k: 1 }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "fa0a65a2-3761-4405-b29e-6908f0275c85",
+      "name": "Geo Govoy · geocode",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Geo Govoy API key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Confianza mínima para dar una dirección por buena sin revisarla\nconst UMBRAL = 0.8;\n\nconst salida = [];\nfor (const item of $input.all()) {\n  for (const r of item.json.results ?? []) {\n    const c = (r.candidates ?? [])[0];\n    const confianza = c ? Number(c.confidence_score) : 0;\n    const dudosa = !c || r.next_action !== 'accept' || confianza < UMBRAL;\n    salida.push({\n      json: {\n        row_number: Number(r.external_id),\n        direccion: r.input?.raw_address ?? '',\n        lat: c ? c.lat : '',\n        lon: c ? c.lon : '',\n        estado: r.status,\n        confianza: c ? Math.round(confianza * 1000) / 1000 : '',\n        direccion_normalizada: c ? c.formatted_address : '',\n        siguiente_paso: r.next_action,\n        motivo: (r.warnings ?? []).join(', '),\n        dudosa,\n      },\n    });\n  }\n}\nreturn salida;"
+      },
+      "id": "793fe9f8-5dc2-4f70-8710-aabff2247310",
+      "name": "Una fila por dirección",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Direcciones",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "estado": "={{ $json.estado }}",
+            "confianza": "={{ $json.confianza }}",
+            "direccion_normalizada": "={{ $json.direccion_normalizada }}",
+            "siguiente_paso": "={{ $json.siguiente_paso }}",
+            "motivo": "={{ $json.motivo }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "confianza",
+              "displayName": "confianza",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "direccion_normalizada",
+              "displayName": "direccion_normalizada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "siguiente_paso",
+              "displayName": "siguiente_paso",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "90b68e01-0457-498d-b1a9-d2aa4e2c9c2e",
+      "name": "Escribir resultados",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1260,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "b6718a8f-7630-4244-8710-b58ab3d24015",
+              "leftValue": "={{ $json.dudosa }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "24bf4ad4-e8db-4ac4-9c3c-40bb59eab4b3",
+      "name": "¿Dudosa?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Dudosas",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "direccion": "={{ $json.direccion }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "estado": "={{ $json.estado }}",
+            "confianza": "={{ $json.confianza }}",
+            "direccion_normalizada": "={{ $json.direccion_normalizada }}",
+            "siguiente_paso": "={{ $json.siguiente_paso }}",
+            "motivo": "={{ $json.motivo }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "direccion",
+              "displayName": "direccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "confianza",
+              "displayName": "confianza",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "direccion_normalizada",
+              "displayName": "direccion_normalizada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "siguiente_paso",
+              "displayName": "siguiente_paso",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "52b6d133-0dd5-4a9a-8c7c-2b062fe9750b",
+      "name": "Copiar a Dudosas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1500,
+        200
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "name": "Google Sheets"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Al ejecutar": {
+      "main": [
+        [
+          {
+            "node": "Leer direcciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer direcciones": {
+      "main": [
+        [
+          {
+            "node": "Preparar lotes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar lotes": {
+      "main": [
+        [
+          {
+            "node": "Geo Govoy · geocode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geo Govoy · geocode": {
+      "main": [
+        [
+          {
+            "node": "Una fila por dirección",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Una fila por dirección": {
+      "main": [
+        [
+          {
+            "node": "Escribir resultados",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "¿Dudosa?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Dudosa?": {
+      "main": [
+        [
+          {
+            "node": "Copiar a Dudosas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

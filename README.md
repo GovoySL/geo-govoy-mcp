@@ -131,7 +131,8 @@ Any MCP client that speaks streamable HTTP, with the `Authorization: Bearer YOUR
 ### Examples, integrations and resources
 
 - [`examples/`](examples/): ready-to-run calls with curl, Python and JavaScript.
-- [`integrations/`](integrations/): Postman collection, n8n, Make and Claude Code (`/geo-ruta`).
+- [`sdk/`](sdk/): minimal REST clients, MIT: Python [`geo-govoy`](sdk/python) and JavaScript/TypeScript [`geo-govoy`](sdk/js) (zero dependencies, ESM + CJS). Batching, typed errors and `Retry-After` handling.
+- [`integrations/`](integrations/): Postman collection, n8n and Make templates (geocode a Google Sheet in batches, flag doubtful rows) and Claude Code (`/geo-ruta`).
 - [Postman workspace](https://www.postman.com/govoyes/workspace/geo-govoy): public collection and environment, fork and add your key.
 - [Status page](https://stats.uptimerobot.com/DbZWFwwWMj): uptime of the REST API and the MCP server.
 - [CHANGELOG](CHANGELOG.md): public changes to tools, endpoints and limits.
@@ -245,7 +246,8 @@ cambiando `YOUR_KEY` por tu clave (en VS Code, `servers` y `"type": "http"`).
 ### Ejemplos, integraciones y recursos
 
 - [`examples/`](examples/): llamadas listas para usar con curl, Python y JavaScript.
-- [`integrations/`](integrations/): colección de Postman, n8n, Make y Claude Code (`/geo-ruta`).
+- [`sdk/`](sdk/): clientes mínimos de la API REST, licencia MIT: Python [`geo-govoy`](sdk/python) y JavaScript/TypeScript [`geo-govoy`](sdk/js) (sin dependencias, ESM + CJS). Lotes, errores tipados y reintentos con `Retry-After`.
+- [`integrations/`](integrations/): colección de Postman, plantillas de n8n y Make (geocodificar una hoja de Google Sheets por lotes y separar las dudosas) y Claude Code (`/geo-ruta`).
 - [Workspace de Postman](https://www.postman.com/govoyes/workspace/geo-govoy): colección y entorno públicos; haz un fork y añade tu clave.
 - [Página de estado](https://stats.uptimerobot.com/DbZWFwwWMj): disponibilidad de la API REST y del servidor MCP.
 - [CHANGELOG](CHANGELOG.md): cambios públicos en herramientas, endpoints y límites.

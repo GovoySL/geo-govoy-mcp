@@ -1,6 +1,34 @@
 # Make · Geocodificar direcciones de una hoja con Geo Govoy
 
-Escenario de ejemplo: lee direcciones de Google Sheets, las geocodifica con Geo Govoy y escribe
+## Escenario importable (por lotes)
+
+Blueprint: [`geocodificar-google-sheets.blueprint.json`](geocodificar-google-sheets.blueprint.json)
+
+```
+Google Sheets (Search Rows, filas sin lat) → Text aggregator (un lote JSON) → HTTP POST /v2/geocode
+  → Iterator (una dirección cada vez) → Router ─┬→ Google Sheets (Update a Row: lat, lon, estado…)
+                                                └→ [filtro: dudosa] Google Sheets (Add a Row en «Dudosas»)
+```
+
+1. Hoja con pestaña **`Direcciones`** y cabeceras en la fila 1, columnas A–H:
+   `direccion | lat | lon | estado | confianza | direccion_normalizada | siguiente_paso | motivo`.
+   Pestaña **`Dudosas`** con las mismas cabeceras.
+2. En Make: **Create a new scenario → ⋯ → Import Blueprint** y elige el fichero.
+3. En los 3 módulos de Google Sheets, elige tu conexión y tu hoja.
+4. En **Geo Govoy · geocode**, cambia `PEGA_AQUI_TU_CLAVE` por tu clave (pídela en admin@govoy.es).
+   Mejor aún: cámbialo por un módulo **HTTP › Make an API Key Auth request** con una clave guardada en
+   *Keys* (cabecera `X-API-Key`), y no compartas el escenario con la clave dentro.
+5. **Run once**. Procesa hasta 1.000 filas con `lat` vacía por ejecución (1 operación HTTP por lote).
+   Prográmalo para el resto.
+
+Qué escribe: `lat`, `lon`, `estado`, `confianza`, `direccion_normalizada`, `siguiente_paso` (`accept`,
+`confirm` o `fix`) y `motivo`. **Dudosa** = `siguiente_paso` distinto de `accept` o confianza < 0,8: se copia
+además a `Dudosas`. Las comillas, barras invertidas y saltos de línea de las direcciones se escapan en el
+agregador para que el JSON sea válido.
+
+## Paso a paso a mano (una dirección por petición)
+
+Si prefieres montarlo tú: lee direcciones de Google Sheets, las geocodifica con Geo Govoy y escribe
 latitud, longitud y estado en la misma hoja. Funciona con el plan gratuito de Make.
 
 ```

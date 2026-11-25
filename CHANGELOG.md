@@ -3,6 +3,12 @@
 Cambios publicados de Geo Govoy (API REST y servidor MCP). Formato basado en
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Fechas en formato AAAA-MM-DD.
 
+## [2026-11-25] SDK y plantillas
+
+### Añadido
+- SDK mínimos de la API REST, versión 0.1.0, licencia MIT: Python en [`sdk/python`](sdk/python) y JavaScript/TypeScript en [`sdk/js`](sdk/js) (sin dependencias, ESM + CJS). Geocodificación por lotes, inversa, matriz, DGT y AEMET en ruta, `me` y `uso`; clave en `GEO_GOVOY_API_KEY`; errores 401/402/413/422/429 tipados y reintentos con `Retry-After`.
+- Plantillas «Geocodificar direcciones de Google Sheets con Geo Govoy» para n8n ([`integrations/n8n`](integrations/n8n)) y Make ([`integrations/make`](integrations/make)).
+
 ## [2026-11-24] Lanzamiento público
 
 ### Añadido

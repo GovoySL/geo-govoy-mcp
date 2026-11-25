@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geo-govoy"
+version = "0.1.0"
+description = "Cliente Python de Geo Govoy: geocodificación, matrices de tiempos por hora, DGT y AEMET en ruta para España"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "GOVOY SOLUTIONS SL", email = "admin@govoy.es" }]
+requires-python = ">=3.9"
+dependencies = [
+    "certifi",
+    "typing_extensions>=4.0; python_version < '3.11'",
+]
+keywords = ["geocoding", "geocodificacion", "spain", "espana", "routing", "distance-matrix", "dgt", "aemet", "logistics", "mcp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Natural Language :: Spanish",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://geo.govoy.es"
+Documentation = "https://geo.govoy.es/docs"
+Source = "https://github.com/GovoySL/geo-govoy-mcp/tree/main/sdk/python"
+Changelog = "https://github.com/GovoySL/geo-govoy-mcp/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+geo_govoy = ["py.typed"]

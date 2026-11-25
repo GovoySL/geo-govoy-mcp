@@ -1,0 +1,45 @@
+{
+  "name": "geo-govoy",
+  "version": "0.1.0",
+  "description": "Cliente de Geo Govoy (sin dependencias): geocodificación, matrices de tiempos por hora, DGT y AEMET en ruta para España",
+  "license": "MIT",
+  "author": "GOVOY SOLUTIONS SL <admin@govoy.es>",
+  "homepage": "https://geo.govoy.es",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GovoySL/geo-govoy-mcp.git",
+    "directory": "sdk/js"
+  },
+  "bugs": "https://github.com/GovoySL/geo-govoy-mcp/issues",
+  "keywords": ["geocoding", "geocodificacion", "spain", "espana", "routing", "distance-matrix", "dgt", "aemet", "logistics", "mcp"],
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json && node scripts/cjs-package.mjs",
+    "test": "npm run build && node --test test/mock.test.mjs test/live.test.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
