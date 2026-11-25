@@ -10,6 +10,7 @@
   <a href="https://govoy.es/geo/precios/">Pricing</a> ·
   <a href="https://geo.govoy.es/docs">API reference</a> ·
   <a href="https://geo.govoy.es/fuentes">Sources</a> ·
+  <a href="https://stats.uptimerobot.com/DbZWFwwWMj">Status</a> ·
   <a href="#español">Español</a>
 </p>
 
@@ -127,6 +128,14 @@ Any MCP client that speaks streamable HTTP, with the `Authorization: Bearer YOUR
 3. "Tomorrow's route passes these stops at these times: any DGT incidents or AEMET warnings?"
 4. "How much of my monthly allowance is left?"
 
+### Examples, integrations and resources
+
+- [`examples/`](examples/): ready-to-run calls with curl, Python and JavaScript.
+- [`integrations/`](integrations/): Postman collection, n8n, Make and Claude Code (`/geo-ruta`).
+- [Postman workspace](https://www.postman.com/govoyes/workspace/geo-govoy): public collection and environment, fork and add your key.
+- [Status page](https://stats.uptimerobot.com/DbZWFwwWMj): uptime of the REST API and the MCP server.
+- [CHANGELOG](CHANGELOG.md): public changes to tools, endpoints and limits.
+
 ### Data, attribution and limitations
 
 Geo Govoy combines open data from Spanish public bodies and collaborative projects with Govoy's own models.
@@ -232,6 +241,14 @@ cambiando `YOUR_KEY` por tu clave (en VS Code, `servers` y `"type": "http"`).
 2. «¿Cuánto se tarda entre estas 10 paradas saliendo mañana a las 7:30 desde Lorca? ¿Y a las 10:00?»
 3. «Mi ruta de mañana pasa por estas paradas a estas horas: ¿hay obras, cortes o avisos de lluvia o viento?»
 4. «¿Cuánto me queda de saldo este mes?»
+
+### Ejemplos, integraciones y recursos
+
+- [`examples/`](examples/): llamadas listas para usar con curl, Python y JavaScript.
+- [`integrations/`](integrations/): colección de Postman, n8n, Make y Claude Code (`/geo-ruta`).
+- [Workspace de Postman](https://www.postman.com/govoyes/workspace/geo-govoy): colección y entorno públicos; haz un fork y añade tu clave.
+- [Página de estado](https://stats.uptimerobot.com/DbZWFwwWMj): disponibilidad de la API REST y del servidor MCP.
+- [CHANGELOG](CHANGELOG.md): cambios públicos en herramientas, endpoints y límites.
 
 ### Datos, atribución y limitaciones
 
