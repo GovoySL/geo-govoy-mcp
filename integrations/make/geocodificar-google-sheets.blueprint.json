@@ -49,7 +49,7 @@
         "otherRowSeparator": ","
       },
       "mapper": {
-        "value": "{\"external_id\":\"{{1.`__ROW_NUMBER__`}}\",\"raw_address\":\"{{replace(replace(1.`0`; /[\\r\\n]+/g; , ); /[\"\\\\]/g; \\$&)}}\"}"
+        "value": "{\"external_id\":\"{{1.`__ROW_NUMBER__`}}\",\"raw_address\":\"{{replace(replace(replace(1.`0`; \"/[\\r\\n]+/g\"; \", \"); \"/\\\\/g\"; \"\\\\\"); \"/\"\"/g\"; \"\\\"\"\")}}\"}"
       },
       "metadata": {
         "designer": {
