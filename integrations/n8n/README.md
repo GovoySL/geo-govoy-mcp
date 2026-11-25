@@ -3,6 +3,7 @@
 | Plantilla | Qué hace |
 |---|---|
 | [`geocodificar-google-sheets.json`](geocodificar-google-sheets.json) | **Geocodificar direcciones de Google Sheets con Geo Govoy**: lee la hoja, geocodifica por lotes de 1.000, escribe lat/lon/estado/confianza en cada fila y copia las dudosas a otra pestaña |
+| [`geocode-google-sheets-en.json`](geocode-google-sheets-en.json) | La misma plantilla en inglés (nodos, notas y cabeceras `address, lat, lon, status, confidence, normalized_address, next_action, reason`; pestañas `Addresses` y `Review`). Es la versión enviada a la galería de plantillas de n8n |
 | [`geocodificar-lista.json`](geocodificar-lista.json) | Geocodificar una lista fija de direcciones (ejemplo mínimo, sin Google) |
 
 ## Geocodificar direcciones de Google Sheets

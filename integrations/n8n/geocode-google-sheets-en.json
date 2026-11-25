@@ -1,0 +1,484 @@
+{
+  "name": "Geocode Spanish addresses in Google Sheets with Geo Govoy (batch, flag doubtful rows)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Geocode Spanish addresses in Google Sheets with Geo Govoy\n\nReads a sheet with an **address** column, geocodes it in batches of up to 1,000 with the Geo Govoy API (`POST /v2/geocode`, Spain only) and writes **lat, lon, status, confidence, normalized_address, next_action and reason** back to the same row. Rows that need review (no match, `next_action` not `accept`, or confidence < 0.8) are also copied to a **Review** tab.\n\n### Setup\n1. Create a Google Sheet with a tab `Addresses` and these headers in row 1: `address | lat | lon | status | confidence | normalized_address | next_action | reason`. Add a tab `Review` with the same headers.\n2. In the 3 Google Sheets nodes, select your Google credential and paste the sheet URL.\n3. In **Geocode batch (Geo Govoy)**, create a **Header Auth** credential: Name `X-API-Key`, Value your Geo Govoy API key (free monthly allowance; request it at admin@govoy.es).\n4. Click **Execute workflow**.\n\n### Notes\n- Only rows with an empty `lat` are processed, so you can re-run it or swap the trigger for a Schedule Trigger.\n- Change `COLUMN` (Build batches) or `THRESHOLD` (One row per address) to adapt it.\n- 1 unit per distinct address; rejected requests are free. The HTTP node retries 3 times (5 s) on errors and 429.\n- `next_action` is `accept`, `confirm` (check with the customer) or `fix` (correct the address).\n- Docs: https://geo.govoy.es/docs",
+        "height": 620,
+        "width": 460,
+        "color": 4
+      },
+      "id": "d86e9153-15df-4359-be19-ee60af982933",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -380,
+        -160
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "b49622a4-35b9-4bdf-b792-91999b01c384",
+      "name": "When clicking 'Execute workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        140,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Addresses",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "f406c510-3646-4f33-847d-36d642fa6531",
+      "name": "Read addresses",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        360,
+        100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sheet column with the address, and batch size (max 1,000 per request)\nconst COLUMN = 'address';\nconst BATCH = 1000;\n\n// Only rows with an address and an empty lat (so the workflow can be re-run safely)\nconst rows = $input.all()\n  .map((i) => i.json)\n  .filter((r) => String(r[COLUMN] ?? '').trim() !== '' && String(r.lat ?? '').trim() === '');\n\nconst batches = [];\nfor (let i = 0; i < rows.length; i += BATCH) {\n  batches.push({\n    json: {\n      items: rows.slice(i, i + BATCH).map((r) => ({\n        external_id: String(r.row_number),\n        raw_address: String(r[COLUMN]).trim(),\n      })),\n    },\n  });\n}\nreturn batches;"
+      },
+      "id": "cbc406da-91d3-40b2-8a46-30fedd474436",
+      "name": "Build batches of 1,000",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://geo.govoy.es/v2/geocode",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ items: $json.items, top_k: 1 }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "fa0a65a2-3761-4405-b29e-6908f0275c85",
+      "name": "Geocode batch (Geo Govoy)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Geo Govoy API key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Minimum confidence to accept an address without review\nconst THRESHOLD = 0.8;\n\nconst out = [];\nfor (const item of $input.all()) {\n  for (const r of item.json.results ?? []) {\n    const c = (r.candidates ?? [])[0];\n    const confidence = c ? Number(c.confidence_score) : 0;\n    const needs_review = !c || r.next_action !== 'accept' || confidence < THRESHOLD;\n    out.push({\n      json: {\n        row_number: Number(r.external_id),\n        address: r.input?.raw_address ?? '',\n        lat: c ? c.lat : '',\n        lon: c ? c.lon : '',\n        status: r.status,\n        confidence: c ? Math.round(confidence * 1000) / 1000 : '',\n        normalized_address: c ? c.formatted_address : '',\n        next_action: r.next_action,\n        reason: (r.warnings ?? []).join(', '),\n        needs_review,\n      },\n    });\n  }\n}\nreturn out;"
+      },
+      "id": "793fe9f8-5dc2-4f70-8710-aabff2247310",
+      "name": "One row per address",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Addresses",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "status": "={{ $json.status }}",
+            "confidence": "={{ $json.confidence }}",
+            "normalized_address": "={{ $json.normalized_address }}",
+            "next_action": "={{ $json.next_action }}",
+            "reason": "={{ $json.reason }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "normalized_address",
+              "displayName": "normalized_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "next_action",
+              "displayName": "next_action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "90b68e01-0457-498d-b1a9-d2aa4e2c9c2e",
+      "name": "Write results to the same row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1260,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "b6718a8f-7630-4244-8710-b58ab3d24015",
+              "leftValue": "={{ $json.needs_review }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "24bf4ad4-e8db-4ac4-9c3c-40bb59eab4b3",
+      "name": "Needs review?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Review",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "address": "={{ $json.address }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "status": "={{ $json.status }}",
+            "confidence": "={{ $json.confidence }}",
+            "normalized_address": "={{ $json.normalized_address }}",
+            "next_action": "={{ $json.next_action }}",
+            "reason": "={{ $json.reason }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "address",
+              "displayName": "address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "normalized_address",
+              "displayName": "normalized_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "next_action",
+              "displayName": "next_action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "52b6d133-0dd5-4a9a-8c7c-2b062fe9750b",
+      "name": "Copy to Review tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1500,
+        200
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "name": "Google Sheets"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Read addresses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read addresses": {
+      "main": [
+        [
+          {
+            "node": "Build batches of 1,000",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build batches of 1,000": {
+      "main": [
+        [
+          {
+            "node": "Geocode batch (Geo Govoy)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode batch (Geo Govoy)": {
+      "main": [
+        [
+          {
+            "node": "One row per address",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One row per address": {
+      "main": [
+        [
+          {
+            "node": "Write results to the same row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Needs review?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs review?": {
+      "main": [
+        [
+          {
+            "node": "Copy to Review tab",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
